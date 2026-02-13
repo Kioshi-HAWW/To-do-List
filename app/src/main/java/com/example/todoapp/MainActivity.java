@@ -5,6 +5,8 @@ import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -24,6 +26,7 @@ public class MainActivity extends AppCompatActivity {
     private DatabaseHelper dbHelper;
     private TodoAdapter adapter;
     private List<TodoItem> todoList;
+    private ActivityResultLauncher<Intent> addTaskLauncher;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -36,18 +39,21 @@ public class MainActivity extends AppCompatActivity {
 
         setupRecyclerView();
 
+        addTaskLauncher = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(),
+            result -> {
+                if (result.getResultCode() == RESULT_OK) {
+                    loadTasks();
+                }
+            });
+
         binding.fabAdd.setOnClickListener(v -> {
             Intent intent = new Intent(MainActivity.this, AddEditTaskActivity.class);
-            startActivity(intent);
+            addTaskLauncher.launch(intent);
         });
 
         checkPermissions();
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        loadTasks();
+        loadTasks(); // Initial load
     }
 
     private void setupRecyclerView() {
@@ -56,13 +62,14 @@ public class MainActivity extends AppCompatActivity {
             public void onItemClick(TodoItem item) {
                 Intent intent = new Intent(MainActivity.this, AddEditTaskActivity.class);
                 intent.putExtra("task_id", item.getId());
-                startActivity(intent);
+                addTaskLauncher.launch(intent);
             }
 
             @Override
             public void onCheckboxClick(TodoItem item, boolean isChecked) {
                 item.setCompleted(isChecked);
-                dbHelper.updateTask(item);
+                dbHelper.deleteTask(item);
+                loadTasks();
             }
         });
         binding.recyclerView.setLayoutManager(new LinearLayoutManager(this));
@@ -70,8 +77,9 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void loadTasks() {
-        todoList = dbHelper.getAllTasks();
-        adapter.updateData(todoList);
+        todoList.clear();
+        todoList.addAll(dbHelper.getAllTasks());
+        adapter.notifyDataSetChanged();
     }
 
     private void checkPermissions() {

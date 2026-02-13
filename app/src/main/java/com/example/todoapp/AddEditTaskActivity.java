@@ -31,6 +31,10 @@ public class AddEditTaskActivity extends AppCompatActivity {
         binding = ActivityAddEditBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
+        if (getSupportActionBar() != null) {
+            getSupportActionBar().hide();
+        }
+
         dbHelper = new DatabaseHelper(this);
 
         if (getIntent().hasExtra("task_id")) {
@@ -138,6 +142,7 @@ public class AddEditTaskActivity extends AppCompatActivity {
         }
 
         Toast.makeText(this, "Task Saved", Toast.LENGTH_SHORT).show();
+        setResult(RESULT_OK);
         finish();
     }
 }
