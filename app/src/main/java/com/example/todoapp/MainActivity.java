@@ -18,6 +18,7 @@ import com.example.todoapp.databinding.ActivityMainBinding;
 import com.example.todoapp.model.TodoItem;
 
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
@@ -26,7 +27,7 @@ public class MainActivity extends AppCompatActivity {
     private DatabaseHelper dbHelper;
     private TodoAdapter adapter;
     private List<TodoItem> todoList;
-    private ActivityResultLauncher<Intent> addTaskLauncher;
+    private ActivityResultLauncher<Intent> taskActivityLauncher;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -39,7 +40,7 @@ public class MainActivity extends AppCompatActivity {
 
         setupRecyclerView();
 
-        addTaskLauncher = registerForActivityResult(
+        taskActivityLauncher = registerForActivityResult(
             new ActivityResultContracts.StartActivityForResult(),
             result -> {
                 if (result.getResultCode() == RESULT_OK) {
@@ -49,7 +50,7 @@ public class MainActivity extends AppCompatActivity {
 
         binding.fabAdd.setOnClickListener(v -> {
             Intent intent = new Intent(MainActivity.this, AddEditTaskActivity.class);
-            addTaskLauncher.launch(intent);
+            taskActivityLauncher.launch(intent);
         });
 
         checkPermissions();
@@ -62,12 +63,23 @@ public class MainActivity extends AppCompatActivity {
             public void onItemClick(TodoItem item) {
                 Intent intent = new Intent(MainActivity.this, AddEditTaskActivity.class);
                 intent.putExtra("task_id", item.getId());
-                addTaskLauncher.launch(intent);
+                taskActivityLauncher.launch(intent);
             }
 
             @Override
             public void onCheckboxClick(TodoItem item, boolean isChecked) {
                 item.setCompleted(isChecked);
+                if (isChecked) {
+                    item.setCompletionDate(System.currentTimeMillis());
+                } else {
+                    item.setCompletionDate(0);
+                }
+                dbHelper.updateTask(item);
+                adapter.notifyDataSetChanged(); // To update the strikethrough
+            }
+
+            @Override
+            public void onDeleteClick(TodoItem item) {
                 dbHelper.deleteTask(item);
                 loadTasks();
             }
@@ -80,6 +92,28 @@ public class MainActivity extends AppCompatActivity {
         todoList.clear();
         todoList.addAll(dbHelper.getAllTasks());
         adapter.notifyDataSetChanged();
+        deleteOldCompletedTasks();
+    }
+
+    private void deleteOldCompletedTasks() {
+        Calendar cal = Calendar.getInstance();
+        cal.add(Calendar.DAY_OF_YEAR, -1);
+        long oneDayAgo = cal.getTimeInMillis();
+
+        List<TodoItem> tasksToDelete = new ArrayList<>();
+        for (TodoItem item : todoList) {
+            if (item.isCompleted() && item.getCompletionDate() > 0 && item.getCompletionDate() < oneDayAgo) {
+                tasksToDelete.add(item);
+            }
+        }
+
+        for (TodoItem item : tasksToDelete) {
+            dbHelper.deleteTask(item);
+        }
+
+        if (!tasksToDelete.isEmpty()) {
+            loadTasks();
+        }
     }
 
     private void checkPermissions() {

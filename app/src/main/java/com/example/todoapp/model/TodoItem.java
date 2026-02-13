@@ -9,6 +9,7 @@ public class TodoItem implements Serializable {
     private boolean isCompleted;
     private long dueDate; // Timestamp
     private boolean hasReminder;
+    private long completionDate;
 
     public TodoItem() {
     }
@@ -67,5 +68,13 @@ public class TodoItem implements Serializable {
 
     public void setHasReminder(boolean hasReminder) {
         this.hasReminder = hasReminder;
+    }
+
+    public long getCompletionDate() {
+        return completionDate;
+    }
+
+    public void setCompletionDate(long completionDate) {
+        this.completionDate = completionDate;
     }
 }

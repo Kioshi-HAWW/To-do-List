@@ -1,5 +1,6 @@
 package com.example.todoapp.adapter;
 
+import android.graphics.Paint;
 import android.text.format.DateFormat;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -21,6 +22,7 @@ public class TodoAdapter extends RecyclerView.Adapter<TodoAdapter.TodoViewHolder
     public interface OnItemClickListener {
         void onItemClick(TodoItem item);
         void onCheckboxClick(TodoItem item, boolean isChecked);
+        void onDeleteClick(TodoItem item);
     }
 
     public TodoAdapter(List<TodoItem> todoList, OnItemClickListener listener) {
@@ -72,11 +74,24 @@ public class TodoAdapter extends RecyclerView.Adapter<TodoAdapter.TodoViewHolder
                     listener.onCheckboxClick(todoList.get(position), binding.cbIsCompleted.isChecked());
                 }
             });
+
+            binding.ivDelete.setOnClickListener(v -> {
+                int position = getAdapterPosition();
+                if (position != RecyclerView.NO_POSITION) {
+                    listener.onDeleteClick(todoList.get(position));
+                }
+            });
         }
 
         public void bind(TodoItem item) {
             binding.tvTitle.setText(item.getTitle());
             binding.cbIsCompleted.setChecked(item.isCompleted());
+
+            if (item.isCompleted()) {
+                binding.tvTitle.setPaintFlags(binding.tvTitle.getPaintFlags() | Paint.STRIKE_THRU_TEXT_FLAG);
+            } else {
+                binding.tvTitle.setPaintFlags(binding.tvTitle.getPaintFlags() & (~Paint.STRIKE_THRU_TEXT_FLAG));
+            }
 
             if (item.getDescription() != null && !item.getDescription().isEmpty()) {
                 binding.tvDescription.setText(item.getDescription());

@@ -14,7 +14,7 @@ import java.util.List;
 public class DatabaseHelper extends SQLiteOpenHelper {
 
     private static final String DATABASE_NAME = "todo_db";
-    private static final int DATABASE_VERSION = 1;
+    private static final int DATABASE_VERSION = 2; // Incremented version
 
     private static final String TABLE_TASKS = "tasks";
     private static final String KEY_ID = "id";
@@ -23,6 +23,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     private static final String KEY_IS_COMPLETED = "is_completed";
     private static final String KEY_DUE_DATE = "due_date";
     private static final String KEY_HAS_REMINDER = "has_reminder";
+    private static final String KEY_COMPLETION_DATE = "completion_date";
 
     public DatabaseHelper(Context context) {
         super(context, DATABASE_NAME, null, DATABASE_VERSION);
@@ -36,14 +37,16 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 + KEY_DESCRIPTION + " TEXT,"
                 + KEY_IS_COMPLETED + " INTEGER,"
                 + KEY_DUE_DATE + " INTEGER,"
-                + KEY_HAS_REMINDER + " INTEGER" + ")";
+                + KEY_HAS_REMINDER + " INTEGER,"
+                + KEY_COMPLETION_DATE + " INTEGER" + ")";
         db.execSQL(CREATE_TASKS_TABLE);
     }
 
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-        db.execSQL("DROP TABLE IF EXISTS " + TABLE_TASKS);
-        onCreate(db);
+        if (oldVersion < 2) {
+            db.execSQL("ALTER TABLE " + TABLE_TASKS + " ADD COLUMN " + KEY_COMPLETION_DATE + " INTEGER DEFAULT 0");
+        }
     }
 
     public long addTask(TodoItem task) {
@@ -55,6 +58,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         values.put(KEY_IS_COMPLETED, task.isCompleted() ? 1 : 0);
         values.put(KEY_DUE_DATE, task.getDueDate());
         values.put(KEY_HAS_REMINDER, task.hasReminder() ? 1 : 0);
+        values.put(KEY_COMPLETION_DATE, task.getCompletionDate());
 
         long id = db.insert(TABLE_TASKS, null, values);
         db.close();
@@ -64,7 +68,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     public TodoItem getTask(int id) {
         SQLiteDatabase db = this.getReadableDatabase();
 
-        Cursor cursor = db.query(TABLE_TASKS, new String[]{KEY_ID, KEY_TITLE, KEY_DESCRIPTION, KEY_IS_COMPLETED, KEY_DUE_DATE, KEY_HAS_REMINDER}, KEY_ID + "=?",
+        Cursor cursor = db.query(TABLE_TASKS, new String[]{KEY_ID, KEY_TITLE, KEY_DESCRIPTION, KEY_IS_COMPLETED, KEY_DUE_DATE, KEY_HAS_REMINDER, KEY_COMPLETION_DATE}, KEY_ID + "=?",
                 new String[]{String.valueOf(id)}, null, null, null, null);
 
         if (cursor != null)
@@ -77,7 +81,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 cursor.getLong(4),
                 cursor.getInt(5) == 1);
         task.setId(cursor.getInt(0));
-        
+        task.setCompletionDate(cursor.getLong(6));
+
         cursor.close();
         return task;
     }
@@ -98,6 +103,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 task.setCompleted(cursor.getInt(3) == 1);
                 task.setDueDate(cursor.getLong(4));
                 task.setHasReminder(cursor.getInt(5) == 1);
+                task.setCompletionDate(cursor.getLong(6));
                 taskList.add(task);
             } while (cursor.moveToNext());
         }
@@ -114,6 +120,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         values.put(KEY_IS_COMPLETED, task.isCompleted() ? 1 : 0);
         values.put(KEY_DUE_DATE, task.getDueDate());
         values.put(KEY_HAS_REMINDER, task.hasReminder() ? 1 : 0);
+        values.put(KEY_COMPLETION_DATE, task.getCompletionDate());
 
         return db.update(TABLE_TASKS, values, KEY_ID + " = ?",
                 new String[]{String.valueOf(task.getId())});
